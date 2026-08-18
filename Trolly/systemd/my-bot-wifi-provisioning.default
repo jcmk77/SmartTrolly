@@ -1,0 +1,24 @@
+# Runtime settings for my-bot-wifi-provisioning.service.
+#
+# This service normally leaves networking unchanged on startup; if a prior
+# protected switch was interrupted, it first restores the previous Wi-Fi.
+# Mutations are accepted only from the IPv4 subnet currently active on the
+# interface below. AP-only actions remain restricted to the AP subnet.
+
+ROBOT_WIFI_INTERFACE=wlan0
+ROBOT_WIFI_AP_CONNECTION=smarttrolly-ap
+ROBOT_WIFI_AP_ADDRESS_CIDR=10.42.0.1/24
+ROBOT_WIFI_HOSTNAME=zrpi-desktop.local
+ROBOT_WIFI_PROVISION_BIND=0.0.0.0
+ROBOT_WIFI_PROVISION_PORT=8090
+ROBOT_WIFI_SWITCH_TIMEOUT_S=180
+# Allow a client connection to recover, or another saved client profile to
+# connect, before the recovery hotspot takes over.
+ROBOT_WIFI_LOSS_GRACE_S=90
+# Total time spent trying saved client profiles before starting the hotspot.
+ROBOT_WIFI_CLIENT_WAIT_S=90
+ROBOT_WIFI_READY_STATE=/run/my-bot-network/ready.json
+ROBOT_WIFI_CONNECTIONS_DIR=/etc/NetworkManager/system-connections
+ROBOT_WIFI_STATE_DIR=/var/lib/my-bot-wifi-provisioning
+ROBOT_WIFI_ROBOT_DEFAULTS=/etc/default/my-bot-robot
+ROBOT_WIFI_ROBOT_SERVICE=my-bot-robot.service

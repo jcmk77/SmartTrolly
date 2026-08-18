@@ -1,0 +1,550 @@
+amcl:
+  ros__parameters:
+    use_sim_time: False
+    # Keep enough motion noise for caster/wheel slip without spreading the
+    # particle cloud so aggressively that AMCL loses a good match while moving.
+    alpha1: 0.3
+    alpha2: 0.3
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+    base_frame_id: "base_link"
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    do_beamskip: true
+    global_frame_id: "map"
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 12.0
+    laser_min_range: -1.0
+    laser_model_type: "likelihood_field_prob"
+    max_beams: 120
+    max_particles: 3000
+    min_particles: 750
+    odom_frame_id: "odom"
+    pf_err: 0.05
+    pf_z: 0.99
+    # Never inject random global particles during routine navigation. A brief
+    # scan mismatch previously let AMCL jump tens of metres into a similar
+    # looking corridor while reporting low covariance. Global localization
+    # remains available as an explicit, stationary operator action.
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    resample_interval: 1
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    # Never reuse AMCL's previous estimate automatically. Localization starts
+    # only after the operator requests a global search or publishes /initialpose.
+    always_reset_initial_pose: true
+    set_initial_pose: false
+    save_pose_rate: -1.0
+    sigma_hit: 0.15
+    tf_broadcast: true
+    transform_tolerance: 0.3
+    update_min_a: 0.01
+    update_min_d: 0.01
+    z_hit: 0.7
+    z_max: 0.05
+    z_rand: 0.25
+    z_short: 0.05
+    scan_topic: /scan_filtered
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: False
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /diff_cont/odom
+    bt_loop_duration: 50
+    # Costmap clears regularly take more than 20 ms while the keepout filter
+    # re-subscribes. Avoid a false timeout before clearance recovery runs.
+    default_server_timeout: 200
+    wait_for_service_timeout: 1000
+    # nav2.launch.py supplies the package-installed NavigateToPose tree. It
+    # retains Nav2's recovery behavior but limits global path replacement to
+    # once every two seconds so small plan changes cannot flip local control.
+    # This leaf must exist for RewrittenYaml to replace it at launch.
+    default_nav_to_pose_bt_xml: "NAVIGATE_TO_POSE_BT_XML_IS_SET_BY_LAUNCH"
+    plugin_lib_names:
+      - nav2_compute_path_to_pose_action_bt_node
+      - nav2_compute_path_through_poses_action_bt_node
+      - nav2_smooth_path_action_bt_node
+      - nav2_follow_path_action_bt_node
+      - nav2_spin_action_bt_node
+      - nav2_wait_action_bt_node
+      - nav2_assisted_teleop_action_bt_node
+      - nav2_back_up_action_bt_node
+      - nav2_drive_on_heading_bt_node
+      - nav2_clear_costmap_service_bt_node
+      - nav2_is_stuck_condition_bt_node
+      - nav2_goal_reached_condition_bt_node
+      - nav2_goal_updated_condition_bt_node
+      - nav2_globally_updated_goal_condition_bt_node
+      - nav2_is_path_valid_condition_bt_node
+      - nav2_initial_pose_received_condition_bt_node
+      - nav2_reinitialize_global_localization_service_bt_node
+      - nav2_rate_controller_bt_node
+      - nav2_distance_controller_bt_node
+      - nav2_speed_controller_bt_node
+      - nav2_truncate_path_action_bt_node
+      - nav2_truncate_path_local_action_bt_node
+      - nav2_goal_updater_node_bt_node
+      - nav2_recovery_node_bt_node
+      - nav2_pipeline_sequence_bt_node
+      - nav2_round_robin_node_bt_node
+      - nav2_transform_available_condition_bt_node
+      - nav2_time_expired_condition_bt_node
+      - nav2_path_expiring_timer_condition
+      - nav2_distance_traveled_condition_bt_node
+      - nav2_single_trigger_bt_node
+      - nav2_goal_updated_controller_bt_node
+      - nav2_is_battery_low_condition_bt_node
+      - nav2_navigate_through_poses_action_bt_node
+      - nav2_navigate_to_pose_action_bt_node
+      - nav2_remove_passed_goals_action_bt_node
+      - nav2_planner_selector_bt_node
+      - nav2_controller_selector_bt_node
+      - nav2_goal_checker_selector_bt_node
+      - nav2_controller_cancel_bt_node
+      - nav2_path_longer_on_approach_bt_node
+      - nav2_wait_cancel_bt_node
+      - nav2_spin_cancel_bt_node
+      - nav2_back_up_cancel_bt_node
+      - nav2_assisted_teleop_cancel_bt_node
+      - nav2_drive_on_heading_cancel_bt_node
+      - nav2_is_battery_charging_condition_bt_node
+
+bt_navigator_navigate_through_poses_rclcpp_node:
+  ros__parameters:
+    use_sim_time: False
+
+bt_navigator_navigate_to_pose_rclcpp_node:
+  ros__parameters:
+    use_sim_time: False
+
+controller_server:
+  ros__parameters:
+    use_sim_time: False
+    enable_stamped_cmd_vel: false
+    # Keep the remote command stream comfortably faster than the Pi-side
+    # deadman timers so ordinary Wi-Fi scheduling jitter does not look like a
+    # navigation failure.
+    # Full rectangular-footprint prediction is intentionally run at 10 Hz on
+    # the central computer. velocity_smoother keeps publishing the accepted
+    # command to the Pi at 20 Hz between controller updates.
+    controller_frequency: 10.0
+    publish_zero_velocity: true
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    # Brief Wi-Fi/TF scheduling gaps must stop motion safely without
+    # immediately launching a physical recovery. The Pi command deadman still
+    # fails closed while the controller waits for fresh transforms.
+    failure_tolerance: 1.5
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugins: ["general_goal_checker"] # "precise_goal_checker"
+    controller_plugins: ["FollowPath"]
+
+    # Progress checker parameters
+    progress_checker:
+      # A long trolley may need to rotate substantially before translating.
+      # Count meaningful angular motion as progress so a valid open-space turn
+      # does not falsely trigger recovery after the linear-only timeout.
+      plugin: "nav2_controller::PoseProgressChecker"
+      required_movement_radius: 0.05
+      required_movement_angle: 0.15
+      # Do not leave a truly stationary controller waiting through two
+      # 30-second FollowPath attempts. A valid slow turn still resets this
+      # timer after 0.15 rad, while a stall now clears the local costmap after
+      # 10 seconds and can reach broader recovery after roughly 20 seconds.
+      movement_time_allowance: 10.0
+    # Goal checker parameters
+    general_goal_checker:
+      stateful: True
+      # A catering stop is a position, not a docking pose. Ignoring goal yaw
+      # lets the robot retain the safest/easiest arrival heading instead of
+      # sweeping its long front end through a final in-place rotation.
+      plugin: "nav2_controller::PositionGoalChecker"
+      xy_goal_tolerance: 0.35
+    # MPPI parameters
+    FollowPath:
+      plugin: "nav2_mppi_controller::MPPIController"
+      # Match model_dt to the 10 Hz controller period. Twenty samples give a
+      # two-second horizon: 1.00 m at maximum speed, which keeps the trolley's
+      # 0.917 m forward overhang inside the 2.50 m local-costmap half-width.
+      time_steps: 20
+      model_dt: 0.10
+      batch_size: 1000
+      iteration_count: 1
+      # Explore decisive translation and rotation without allowing sampled
+      # commands beyond the physical navigation envelope. The wider angular
+      # distribution deliberately includes low-linear-speed, high-yaw-rate
+      # candidates so MPPI may choose an in-place turn during normal path
+      # tracking when that is safer than sweeping the trolley through an arc.
+      vx_std: 0.25
+      vy_std: 0.0
+      wz_std: 0.65
+      # Keep autonomous travel below the 0.70 m/s hardware ceiling so the
+      # front lidar gets more scans of thin chair legs before contact.
+      vx_max: 0.50
+      vx_min: -0.50
+      vy_max: 0.0
+      # Limit normal path corrections so the long trolley does not sweep into
+      # nearby obstacles while MPPI is correcting a large heading error.
+      # Recovery behaviors retain their separately configured turn limit.
+      wz_max: 0.60
+      temperature: 0.3
+      gamma: 0.015
+      # Give a transient all-invalid sample batch one extra resampling attempt
+      # before FollowPath aborts and the BT clears the local costmap. This does
+      # not relax footprint collision checks or suppress genuine recovery.
+      retry_attempt_limit: 2
+      motion_model: "DiffDrive"
+      visualize: false
+      reset_period: 1.0
+      # Include enough lattice path for every predicted trajectory while keeping
+      # the closest-path search within the rolling local costmap.
+      prune_distance: 2.0
+      # Logs show occasional map/odom scheduling gaps approaching 0.60 s over
+      # the robot Wi-Fi link. Absorb those without weakening the Pi's
+      # independent command deadman or its fresh-lidar motion constraints.
+      transform_tolerance: 0.70
+      # Score forward and reverse equally. The trolley may therefore back out
+      # of a wall-facing pose or approach a wall-adjacent goal rear-first when
+      # that produces the safer footprint-checked trajectory.
+      # There is no GoalAngleCritic because catering stops are positions and
+      # must not trigger a final heading spin. There is deliberately no
+      # TwirlingCritic: angular-only trajectories remain valid normal-driving
+      # candidates and are still collision-scored using the full footprint.
+      critics: ["ConstraintCritic", "ObstaclesCritic", "GoalCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "FinalApproachDirectionCritic"]
+      ConstraintCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0
+      ObstaclesCritic:
+        enabled: true
+        cost_power: 1
+        # Score clearance from the full asymmetric trolley footprint instead
+        # of the axle-center cost used by CostCritic. The 0.20 m critical
+        # margin covers the Pi's measured front/side stop envelope and comes
+        # within one 0.05 m costmap cell of its 0.21 m rear envelope. It is a
+        # trajectory preference, not a hard global keepout: a narrow route can
+        # still be used when no safer local arc exists.
+        consider_footprint: true
+        repulsion_weight: 1.0
+        critical_weight: 20.0
+        collision_cost: 1000000.0
+        collision_margin_distance: 0.20
+        near_goal_distance: 0.5
+        # Humble's ObstaclesCritic needs these to match the ordinary local
+        # inflation layer when converting inflated cost back to clearance.
+        cost_scaling_factor: 4.0
+        inflation_radius: 0.60
+      GoalCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        threshold_to_consider: 1.4
+      PathAlignCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 8.0
+        max_path_occupancy_ratio: 0.10
+        trajectory_point_step: 4
+        threshold_to_consider: 0.5
+        offset_from_furthest: 10
+        # SmacPlannerLattice encodes the footprint-safe body heading and travel
+        # direction at each path pose. Follow that orientation so the axle does
+        # not track the XY centerline while the trolley's long front sweeps
+        # across a wall or keepout boundary.
+        use_path_orientations: true
+      PathFollowCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        offset_from_furthest: 5
+        threshold_to_consider: 1.4
+      PathAngleCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 2.0
+        offset_from_furthest: 4
+        threshold_to_consider: 0.5
+        # Start scoring rotation-dominant trajectories once the usable path is
+        # roughly 43 degrees away. This does not force a spin: MPPI may still
+        # select a footprint-safe arc or reverse when it has the lower cost.
+        max_angle_to_furthest: 0.75
+        # Humble's bidirectional mode compares forward and mirrored headings,
+        # allowing MPPI to select the shorter collision-checked direction.
+        forward_preference: false
+      FinalApproachDirectionCritic:
+        enabled: true
+        cost_power: 1
+        # Preserve whichever direction was already carrying the trolley into
+        # final approach. Collision costs remain orders of magnitude stronger,
+        # so a genuinely blocked direction can still be abandoned.
+        cost_weight: 20.0
+        approach_distance: 1.4
+        speed_threshold: 0.08
+        goal_change_tolerance: 0.5
+        # At 10 Hz, half a second of actual opposite motion confirms that a
+        # forced direction change succeeded and should become the new latch.
+        opposite_confirmation_cycles: 5
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 7.0
+      publish_frequency: 3.0
+      global_frame: odom
+      robot_base_frame: base_link
+      use_sim_time: False
+      rolling_window: true
+      # base_link is the drive-axle midpoint. The footprint is deliberately
+      # asymmetric because most of the trolley extends in front of the axle.
+      width: 5
+      height: 5
+      resolution: 0.05
+      footprint: "[[-0.15, -0.305], [0.917, -0.305], [0.917, 0.305], [-0.15, 0.305]]"
+      # Keep the commanded footprint outside walls and keepout cells before
+      # the Pi's independent clearance filter has to intervene.
+      footprint_padding: 0.08
+      plugins: ["voxel_layer", "inflation_layer"]
+      filters: ["keepout_filter", "keepout_inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # Match the Pi's ~0.59 m side-intervention envelope from the axle
+        # center. The exact padded footprint still rejects collisions; this
+        # field guides MPPI without making physically safe narrow aisles look
+        # unusable.
+        cost_scaling_factor: 4.0
+        inflation_radius: 0.60
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        footprint_clearing_enabled: True
+        publish_voxel_map: True
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: /scan_filtered
+          # Bridge a single missed chair-leg return without repeatedly
+          # re-marking stale local obstacles long enough to trap MPPI.
+          observation_persistence: 0.20
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 4.0
+          obstacle_min_range: 0.0
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: True
+        filter_info_topic: "/costmap_filter_info"
+      keepout_inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # Costmap filters run after the ordinary inflation plugin. Inflate the
+        # keepout mask separately so the planner keeps the axle center away
+        # from its lethal edge instead of proposing paths the full trolley
+        # footprint and Pi-local safety layer cannot follow. Decay this static
+        # keepout preference slightly faster than live-obstacle inflation so
+        # its medium-cost halo does not unnecessarily slow a clear aisle.
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.60
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      always_send_full_costmap: false
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 2.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      use_sim_time: False
+      footprint: "[[-0.15, -0.305], [0.917, -0.305], [0.917, 0.305], [-0.15, 0.305]]"
+      footprint_padding: 0.08
+      resolution: 0.05
+      track_unknown_space: true
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      filters: ["keepout_filter", "keepout_inflation_layer", "preferred_filter"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        footprint_clearing_enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan_filtered
+          # Keep intermittent thin-obstacle returns long enough for the global
+          # planner to choose and retain a route around the obstruction.
+          observation_persistence: 0.75
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 4.0
+          obstacle_min_range: 0.0
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: True
+        filter_info_topic: "/costmap_filter_info"
+      keepout_inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # Apply the same clearance field after the keepout mask so the planner
+        # does not route the robot center along an uninflated keepout boundary.
+        # The steeper decay keeps the hard boundary and outer awareness radius
+        # but gives the global planner more usable width in a clear aisle.
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.60
+      preferred_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: True
+        # This second type-0 mask is global-only. White preferred corridors add
+        # no cost, while light-gray alternatives remain traversable but lose
+        # to the preferred route when path lengths are otherwise comparable.
+        filter_info_topic: "/preferred_costmap_filter_info"
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # Use the same clearance model as local control and Pi side safety so
+        # the planner may choose a narrow route when it is the cleanest valid
+        # path.
+        # Inflation remains a preference; the padded footprint is the hard
+        # geometric collision boundary.
+        cost_scaling_factor: 4.0
+        inflation_radius: 0.60
+      always_send_full_costmap: True
+
+map_server:
+  ros__parameters:
+    use_sim_time: False
+    # Overridden in launch by the "map" launch configuration or provided default value.
+    # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
+    yaml_filename: ""
+
+map_saver:
+  ros__parameters:
+    use_sim_time: False
+    save_map_timeout: 5.0
+    free_thresh_default: 0.25
+    occupied_thresh_default: 0.65
+    map_subscribe_transient_local: True
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 5.0
+    use_sim_time: False
+    planner_plugins: ["GridBased"]
+    GridBased:
+      # The differential-drive lattice checks the trolley's full rectangular
+      # footprint while searching. Its primitive set contains forward,
+      # reverse, curved travel, and in-place rotations. Forward and reverse
+      # have equal cost so clearance and route quality decide between them.
+      plugin: "nav2_smac_planner/SmacPlannerLattice"
+      tolerance: 0.25
+      allow_unknown: false
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0
+      reverse_penalty: 1.0
+      change_penalty: 0.05
+      non_straight_penalty: 1.05
+      cost_penalty: 2.0
+      rotation_penalty: 5.0
+      retrospective_penalty: 0.015
+      lattice_filepath: "/opt/ros/humble/share/nav2_smac_planner/sample_primitives/5cm_resolution/0.5m_turning_radius/diff/output.json"
+      lookup_table_size: 20.0
+      cache_obstacle_heuristic: false
+      allow_reverse_expansion: true
+      smooth_path: true
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: False
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: True
+
+behavior_server:
+  ros__parameters:
+    costmap_topic: local_costmap/costmap_raw
+    footprint_topic: local_costmap/published_footprint
+    cycle_frequency: 5.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
+    spin:
+      plugin: "nav2_behaviors/Spin"
+    backup:
+      plugin: "nav2_behaviors/BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors/DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors/Wait"
+    assisted_teleop:
+      plugin: "nav2_behaviors/AssistedTeleop"
+    global_frame: odom
+    robot_base_frame: base_link
+    transform_tolerance: 0.1
+    use_sim_time: false
+    simulate_ahead_time: 2.0
+    # Recovery turns happen only after backing into clearance. Keep them below
+    # the normal MPPI ceiling, but fast enough that a 90-degree recovery does
+    # not spend several seconds crawling through the turn. Pi-local side
+    # safety still scales or stops this command when clearance is insufficient.
+    max_rotational_vel: 0.70
+    min_rotational_vel: 0.10
+    rotational_acc_lim: 0.70
+
+robot_state_publisher:
+  ros__parameters:
+    use_sim_time: False
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: False
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: False
+    enable_stamped_cmd_vel: false
+    smoothing_frequency: 20.0
+    scale_velocities: False
+    # The physical odometry response lags each newly smoothed command. In
+    # CLOSED_LOOP mode that repeatedly reset the ramp to measured speed and
+    # held a 0.55 m/s request near 0.10 m/s indefinitely. OPEN_LOOP advances
+    # from the previous smoothed command; the Pi safety node and diff-drive
+    # controller still enforce local stopping and hardware limits.
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.50, 0.0, 0.60]
+    min_velocity: [-0.50, 0.0, -0.60]
+    max_accel: [0.35, 0.0, 1.50]
+    max_decel: [-2.00, 0.0, -1.80]
+    odom_topic: "/diff_cont/odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    # Allow a short controller scheduling pause. The Pi independently applies
+    # fresh lidar constraints and has its own navigation-stream deadman.
+    velocity_timeout: 0.5

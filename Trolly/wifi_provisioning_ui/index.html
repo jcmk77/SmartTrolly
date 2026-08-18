@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SmartTrolly Network Setup</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <div class="brand-mark" aria-hidden="true">IT</div>
+        <div>
+          <p class="eyebrow">Raspberry Pi recovery network</p>
+          <h1>SmartTrolly Network Setup</h1>
+          <p>
+            Save a facility Wi-Fi connection from the network currently shared
+            by this computer and the Pi. The robot service starts automatically;
+            nothing switches until you explicitly approve it.
+          </p>
+        </div>
+      </header>
+
+      <section class="status-strip" aria-label="Current network status">
+        <div>
+          <span>Active connection</span>
+          <strong id="active-connection">Checking…</strong>
+        </div>
+        <div>
+          <span>Pi address</span>
+          <strong id="interface-address">Checking…</strong>
+        </div>
+        <div>
+          <span>Provisioning access</span>
+          <strong id="provisioning-access">Checking…</strong>
+        </div>
+      </section>
+
+      <div class="notice recovery-notice">
+        <strong>The robot hotspot remains the recovery path.</strong>
+        <span>
+          If the facility connection cannot be confirmed, NetworkManager
+          automatically restores the previous Wi-Fi. A dropped client gets
+          90 seconds to reconnect or move to another saved network first.
+        </span>
+      </div>
+
+      <section class="card" id="ap-card">
+        <div class="card-heading">
+          <div>
+            <p class="step-label">Option A</p>
+            <h2>Configure this computer for the robot hotspot</h2>
+          </div>
+        </div>
+        <p>
+          This optional step records this computer as an explicit ROS 2 peer.
+          The Pi and robot service already use
+          <strong>SmartTrolly</strong> automatically; this does not switch Wi-Fi.
+        </p>
+        <label class="checkbox-row safety-check">
+          <input id="ap-robot-stationary" type="checkbox" />
+          <span>The robot is stationary and safe for a service restart.</span>
+        </label>
+        <button class="primary" id="use-ap-button" type="button" disabled>
+          Configure this computer
+        </button>
+        <p class="message" id="ap-message" role="status"></p>
+      </section>
+
+      <section class="card" id="facility-card">
+        <div class="card-heading">
+          <div>
+            <p class="step-label">Option B · Step 1</p>
+            <h2>Save facility Wi-Fi</h2>
+          </div>
+          <button class="secondary" id="scan-button" type="button">
+            Scan networks
+          </button>
+        </div>
+
+        <form id="facility-form">
+          <label>
+            <span>Network name (SSID)</span>
+            <input
+              id="ssid"
+              name="ssid"
+              maxlength="32"
+              autocomplete="off"
+              list="network-options"
+              required
+            />
+            <datalist id="network-options"></datalist>
+          </label>
+
+          <label class="hidden" id="network-results-field">
+            <span>Nearby networks — select one</span>
+            <select id="network-results" size="5"></select>
+          </label>
+
+          <label>
+            <span>Security</span>
+            <select id="security" name="security">
+              <option value="wpa-psk">WPA/WPA2 Personal</option>
+              <option value="open">Open network</option>
+            </select>
+          </label>
+
+          <label id="password-field">
+            <span>Wi-Fi password</span>
+            <div class="password-row">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                minlength="8"
+                maxlength="64"
+                autocomplete="new-password"
+              />
+              <button class="secondary compact" id="show-password" type="button">
+                Show
+              </button>
+            </div>
+          </label>
+
+          <label class="checkbox-row">
+            <input id="hidden-network" type="checkbox" />
+            <span>This network does not broadcast its name</span>
+          </label>
+
+          <div class="form-actions">
+            <button class="primary" id="stage-button" type="submit">
+              Save without switching
+            </button>
+          </div>
+        </form>
+
+        <p class="message" id="facility-message" role="status"></p>
+      </section>
+
+      <section class="card hidden" id="saved-profiles-card">
+        <div class="card-heading">
+          <div>
+            <p class="step-label">Saved connections</p>
+            <h2>Known facility Wi-Fi</h2>
+          </div>
+        </div>
+        <p>
+          Confirmed profiles are all retained and tried automatically. Select a
+          profile to test it, or remove one explicitly. The active connection
+          cannot be removed.
+        </p>
+        <div class="profile-list" id="saved-profiles"></div>
+        <p class="message" id="profiles-message" role="status"></p>
+      </section>
+
+      <section class="card hidden" id="switch-card">
+        <div class="card-heading">
+          <div>
+            <p class="step-label">Step 2</p>
+            <h2>Test the saved connection</h2>
+          </div>
+        </div>
+
+        <div class="saved-network">
+          <span>Ready to test</span>
+          <strong id="staged-ssid">—</strong>
+        </div>
+
+        <ol class="checklist">
+          <li>Keep the robot stopped and wheels raised or immobilized.</li>
+          <li>Make sure this computer also knows the facility Wi-Fi.</li>
+          <li>
+            After switching, reconnect this computer to that Wi-Fi and use the
+            confirmation link before the timer expires.
+          </li>
+        </ol>
+
+        <label class="checkbox-row safety-check">
+          <input id="robot-stationary" type="checkbox" />
+          <span>The robot is stationary and safe for a network restart.</span>
+        </label>
+
+        <button class="danger" id="switch-button" type="button" disabled>
+          Switch and start rollback timer
+        </button>
+        <p class="message" id="switch-message" role="status"></p>
+      </section>
+
+      <section class="card hidden" id="pending-card">
+        <p class="step-label">Step 3</p>
+        <h2>Reconnect and confirm</h2>
+        <p>
+          Connect this computer to <strong id="pending-ssid">the facility Wi-Fi</strong>,
+          then open the link below. If it cannot be reached, wait for the Pi
+          to restore the previous Wi-Fi or its recovery hotspot.
+        </p>
+        <a class="confirm-link" id="confirm-link" href="#">Open confirmation page</a>
+        <p class="countdown" id="rollback-countdown"></p>
+      </section>
+
+      <section class="card hidden" id="confirm-card">
+        <p class="step-label">Final confirmation</p>
+        <h2>Keep this facility connection?</h2>
+        <p>
+          Confirm from the Linux or Windows computer that will operate the robot.
+          Its address will become the Pi’s explicit ROS 2 peer.
+        </p>
+        <label class="checkbox-row safety-check">
+          <input id="central-computer" type="checkbox" />
+          <span>This computer will operate or monitor SmartTrolly.</span>
+        </label>
+        <button class="primary" id="confirm-button" type="button" disabled>
+          Confirm facility Wi-Fi
+        </button>
+        <p class="message" id="confirm-message" role="status"></p>
+      </section>
+
+      <section class="card success-card hidden" id="complete-card">
+        <p class="step-label">Network configured</p>
+        <h2>Robot network ready</h2>
+        <p id="complete-message"></p>
+        <dl class="network-summary">
+          <div>
+            <dt>Robot address</dt>
+            <dd id="robot-address">—</dd>
+          </div>
+          <div>
+            <dt>Robot subnet</dt>
+            <dd id="robot-subnet">—</dd>
+          </div>
+          <div>
+            <dt>Operator address</dt>
+            <dd id="central-address">—</dd>
+          </div>
+          <div>
+            <dt>ROS domain</dt>
+            <dd id="ros-domain">—</dd>
+          </div>
+        </dl>
+        <div id="windows-tools">
+          <a class="primary action-link" id="windows-config-link" href="#">
+            Optional: configure Windows Central
+          </a>
+          <p class="fine-print">
+            Linux needs no Windows handoff. Use the displayed ROS domain and
+            verify ROS discovery from Linux on this network.
+          </p>
+        </div>
+      </section>
+
+      <footer>
+        NetworkManager brings up saved Wi-Fi or this recovery hotspot before
+        the ROS 2 hardware and safety service starts.
+      </footer>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

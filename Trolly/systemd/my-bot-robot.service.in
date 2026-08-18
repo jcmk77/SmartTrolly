@@ -1,0 +1,38 @@
+[Unit]
+Description=SmartTrolly ROS 2 hardware and safety stack
+Documentation=file://@ROBOT_PACKAGE_DIR@/docs/PI_DEPLOYMENT.md
+Requires=my-bot-network-ready.service
+After=local-fs.target my-bot-network-ready.service
+StartLimitIntervalSec=0
+ConditionPathExists=@ROBOT_WORKSPACE@/install/setup.bash
+
+[Service]
+Type=simple
+User=@ROBOT_USER@
+SupplementaryGroups=dialout
+WorkingDirectory=@ROBOT_WORKSPACE@
+Environment=HOME=@ROBOT_HOME@
+Environment=ROBOT_WORKSPACE=@ROBOT_WORKSPACE@
+Environment=ROBOT_LAUNCH_FILE=rpi_robot.launch.py
+Environment=ROS_DOMAIN_ID=0
+Environment=ROS_LOCALHOST_ONLY=0
+Environment=RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+Environment=RCUTILS_COLORIZED_OUTPUT=0
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/default/my-bot-robot
+ExecStart=/usr/bin/bash @ROBOT_PACKAGE_DIR@/scripts/start_robot_stack.sh
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStopSec=30
+CPUWeight=200
+LimitRTPRIO=90
+LimitMEMLOCK=infinity
+UMask=0027
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=my-bot-robot
+
+[Install]
+WantedBy=multi-user.target
